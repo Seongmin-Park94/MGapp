@@ -2,19 +2,28 @@ import streamlit as st
 import requests
 from streamlit_lottie import st_lottie
 
+# Lottie URL을 불러오는 함수 (오류 발생 시 앱이 멈추지 않도록 예외 처리 추가)
 def load_lottieurl(url: str):
-    r = requests.get(url)
-    if r.status_code != 200:
+    try:
+        r = requests.get(url)
+        if r.status_code != 200:
+            return None
+        return r.json()
+    except Exception as e:
         return None
-    return r.json()
 
 st.title("Hello Streamlit-er 👋")
 st.markdown("로딩이나 버벅거림 없이 무한으로 날아다니는 풍선입니다! 🎈")
 
-# Lottie 풍선 애니메이션 URL
-lottie_balloons_url = "https://lottie.host/932ed212-e8ef-4680-8772-2ff85f523c9f/X6J7M0Pz8F.json"
+# Lottie 풍선 애니메이션 URL (안정적인 링크로 교체)
+lottie_balloons_url = "https://assets9.lottiefiles.com/packages/lf20_p8bfn5to.json"
+
+# 애니메이션 데이터 불러오기
 lottie_balloons = load_lottieurl(lottie_balloons_url)
 
+# 데이터가 성공적으로 불러와졌다면 화면에 렌더링
 if lottie_balloons:
-    # 앱 한가운데에 무한 반복되는 풍선 띄우기
     st_lottie(lottie_balloons, height=400, key="infinite_balloons")
+else:
+    # 링크가 만료되었거나 인터넷 문제로 불러오지 못했을 때 띄울 에러 메시지
+    st.error("앗! 풍선 애니메이션을 불러오지 못했습니다. Lottie URL 링크가 유효한지 확인해 주세요.")
