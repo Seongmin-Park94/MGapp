@@ -174,7 +174,7 @@
         // -------------------------------------------------------------
         // 필수 설정: 배포한 Google Apps Script 웹 앱 URL을 여기에 입력하세요!
         // -------------------------------------------------------------
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxjEwi3KLP8qSO4AUXhQL1bbUdEvYGm97LcqHwer1Q_DBlNfN3wejIjyahD2JvixZ9W/exec'; 
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzOAuI72ab8VOgy55BqC6-KlgvKJwUAZewvv_mxJAbslr3Nj1SKHN2s9ThcDLB7PRAA/exec'; 
 
         // State Management
         let budgetData = [];
@@ -409,6 +409,7 @@
             const monthlyData = {};
 
             // Grouping data by month and category
+            budgetData.forEach(item => {
                 if(!monthlyData[item.month]) {
                     monthlyData[item.month] = { '수선유지비': 0, '비품': 0, '개량공사': 0, total: 0 };
                 }
