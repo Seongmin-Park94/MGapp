@@ -33,6 +33,12 @@ function handleResponse(e) {
       clearAllData(sheet);
       return createJsonResponse({ status: 'success', message: 'All data cleared.' });
     }
+    // 👇👇 새로 추가하는 부분 👇👇
+    else if (action === 'getSummary') {
+      // G1 셀에 입력된 =mygemini(...) 수식의 결과 텍스트를 가져옵니다.
+      const summary = sheet.getRange("G1").getValue(); 
+      return createJsonResponse({ status: 'success', data: summary });
+    }
     else {
       return createJsonResponse({ status: 'error', message: 'Invalid action.' });
     }
@@ -99,7 +105,7 @@ function createJsonResponse(data) {
  */
 function mygemini(prompt) {
   // 1. 발급받은 API 키를 여기에 넣으세요
-  const apiKey = "*";
+  const apiKey = "AQ.Ab8RN6K-aiv8ZxuVurBRxt4pW2SsW75K0R1V7Y_wGiI2VxfZMw";
   const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=" + apiKey;
   const payload = {
     "contents": [{
