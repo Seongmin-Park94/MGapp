@@ -12,8 +12,8 @@ def load_lottieurl(url: str):
     except Exception as e:
         return None
 
-st.title("Hello Streamlit-er 👋")
-st.markdown("로딩이나 버벅거림 없이 무한으로 날아다니는 풍선입니다! 🎈")
+st.title("Hello 성민 👋")
+st.markdown("풍선입니다! 🎈")
 
 # Lottie 풍선 애니메이션 URL (안정적인 링크로 교체)
 lottie_balloons_url = "https://assets9.lottiefiles.com/packages/lf20_p8bfn5to.json"
