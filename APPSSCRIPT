@@ -1,0 +1,126 @@
+// Apps Script Code (Code.gs)
+const SHEET_NAME = '예산데이터';
+
+function doGet(e) {
+  return handleResponse(e);
+}
+
+function doPost(e) {
+  return handleResponse(e);
+}
+
+function handleResponse(e) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
+  
+  try {
+    const action = e.parameter.action;
+
+    if (action === 'read') {
+      const data = readData(sheet);
+      return createJsonResponse({ status: 'success', data: data });
+    } 
+    else if (action === 'write') {
+      const payload = JSON.parse(e.postData.contents);
+      writeData(sheet, payload);
+      return createJsonResponse({ status: 'success', message: 'Data saved successfully.' });
+    }
+    else if (action === 'delete') {
+      const id = e.parameter.id;
+      deleteData(sheet, id);
+      return createJsonResponse({ status: 'success', message: 'Data deleted successfully.' });
+    }
+    else if (action === 'clear') {
+      clearAllData(sheet);
+      return createJsonResponse({ status: 'success', message: 'All data cleared.' });
+    }
+    else {
+      return createJsonResponse({ status: 'error', message: 'Invalid action.' });
+    }
+  } catch (error) {
+    return createJsonResponse({ status: 'error', message: error.toString() });
+  }
+}
+
+function readData(sheet) {
+  const dataRange = sheet.getDataRange();
+  const values = dataRange.getValues();
+  const data = [];
+  
+  if (values.length > 1) {
+    const headers = values[0];
+    for (let i = 1; i < values.length; i++) {
+      const row = values[i];
+      const record = {};
+      for (let j = 0; j < headers.length; j++) {
+        record[headers[j]] = row[j];
+      }
+      data.push(record);
+    }
+  }
+  // 최신 데이터가 위로 오도록 역순으로 정렬
+  return data.reverse();
+}
+
+function writeData(sheet, payload) {
+  const timestamp = new Date();
+  sheet.appendRow([payload.id, payload.member, payload.month, payload.category, payload.amount, timestamp]);
+}
+
+function deleteData(sheet, idToDelete) {
+  const dataRange = sheet.getDataRange();
+  const values = dataRange.getValues();
+  
+  for (let i = 1; i < values.length; i++) {
+    // String 변환 후 비교
+    if (String(values[i][0]) === String(idToDelete)) {
+      sheet.deleteRow(i + 1); // 배열 인덱스는 0부터, 시트 행은 1부터 시작 (헤더 포함 +1)
+      break;
+    }
+  }
+}
+
+function clearAllData(sheet) {
+  const lastRow = sheet.getLastRow();
+  if (lastRow > 1) {
+    // 2번째 행부터 마지막 행까지 삭제 (헤더 유지)
+    sheet.deleteRows(2, lastRow - 1); 
+  }
+}
+
+function createJsonResponse(data) {
+  return ContentService.createTextOutput(JSON.stringify(data))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+/**
+ * Gemini AI에게 질문을 던지는 커스텀 함수
+ * @param {string} prompt 질문 내용
+ * @return Gemini의 답변
+ * @customfunction
+ */
+function mygemini(prompt) {
+  // 1. 발급받은 API 키를 여기에 넣으세요
+  const apiKey = "*";
+  const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=" + apiKey;
+  const payload = {
+    "contents": [{
+      "parts": [{
+        "text": prompt
+      }]
+    }]
+  };
+  const options = {
+    "method": "post",
+    "contentType": "application/json",
+    "payload": JSON.stringify(payload)
+  };
+  try {
+    const response = UrlFetchApp.fetch(url, options);
+    const json = JSON.parse(response.getContentText());
+
+    // 답변 텍스트만 추출
+    const result = json.candidates[0].content.parts[0].text;
+    return result.trim();
+  } catch (e) {
+    return "에러 발생: " + e.toString();
+  }
+}
