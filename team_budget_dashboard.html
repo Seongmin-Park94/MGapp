@@ -169,7 +169,12 @@
         // -------------------------------------------------------------
         // 필수 설정: 배포한 Google Apps Script 웹 앱 URL
         // -------------------------------------------------------------
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwhDm7QjbC8ys2ebpmgy3Vo_59Nf6RQJ0_OpKt5GqAlPMXdV6Pzd12BdFAbfry8hyHe/exec';
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzOAuI72ab8VOgy55BqC6-KlgvKJwUAZewvv_mxJAbslr3Nj1SKHN2s9ThcDLB7PRAA/exec';
+        
+        // -------------------------------------------------------------
+        // 필수 설정: Gemini API Key (이곳에 실제 발급받은 API 키를 입력하세요)
+        // -------------------------------------------------------------
+        const GEMINI_API_KEY = "여기에_실제_API_키를_입력하세요";
 
         // State Management
         let budgetData = [];
@@ -188,7 +193,6 @@
 
         // Fetch Data from Google Sheets
         async function fetchBudgetData() {
-            // 알림을 발생시키던 문제의 방어 코드(if문)가 완전히 제거되었습니다.
             showLoading('데이터를 불러오는 중입니다...');
             try {
                 const response = await fetch(`${SCRIPT_URL}?action=read`);
@@ -443,6 +447,13 @@
                 return;
             }
 
+            // API 키 확인
+            if (!GEMINI_API_KEY || GEMINI_API_KEY === "AQ.Ab8RN6K-aiv8ZxuVurBRxt4pW2SsW75K0R1V7Y_wGiI2VxfZMw") {
+                container.classList.remove('hidden');
+                content.innerHTML = '<span class="text-red-500">API 키가 설정되지 않아 AI 요약을 사용할 수 없습니다. 코드에서 GEMINI_API_KEY를 설정해주세요.</span>';
+                return;
+            }
+
             // 분석 중 UI 표시
             container.classList.remove('hidden');
             content.innerHTML = '<span class="animate-pulse text-indigo-500">지출 내역을 AI가 분석하고 있습니다... 🤖</span>';
@@ -455,9 +466,7 @@
                 contents: [{ parts: [{ text: prompt }] }]
             };
             
-            // API Key는 환경에서 자동 주입되므로 빈 문자열로 둡니다.
-            const apiKey = ""; 
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
 
             try {
                 const response = await fetch(apiUrl, {
@@ -465,16 +474,22 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
+                
+                if (!response.ok) {
+                    throw new Error(`API 응답 오류: ${response.status}`);
+                }
+                
                 const result = await response.json();
                 
                 if (result.candidates && result.candidates.length > 0 && result.candidates[0].content) {
                     content.innerText = result.candidates[0].content.parts[0].text;
                 } else {
                     content.innerText = "AI 요약을 생성하지 못했습니다.";
+                    console.error("API 응답 형태 이상:", result);
                 }
             } catch (error) {
                 console.error('AI Error:', error);
-                content.innerText = "AI 연동 중 오류가 발생했습니다.";
+                content.innerText = `AI 연동 중 오류가 발생했습니다: ${error.message}`;
             }
         }
 
