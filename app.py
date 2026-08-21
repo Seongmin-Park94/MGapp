@@ -34,7 +34,7 @@ st.subheader("🖼️ 깃허브에 저장된 이미지")
 # 이미지 불러오기 (주의: 실제 깃허브에 올려진 파일의 확장자 .png / .jpg 와 정확히 일치해야 합니다)
 try:
     # 화면 너비에 맞춰서 이미지를 예쁘게 출력합니다.
-    st.image("image1.png", caption="image1", use_container_width=True)
+    st.image("image1.jpg", caption="image1", use_container_width=True)
 except Exception as e:
     # 파일명이나 확장자가 달라서 이미지를 못 찾을 경우 띄워줄 안내 메시지
     st.warning("이미지를 찾을 수 없습니다. 깃허브에 저장된 파일 이름이 'image1.png'인지, 아니면 'image1.jpg'인지 확장자를 꼭 확인해 주세요!")
