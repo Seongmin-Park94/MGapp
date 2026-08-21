@@ -28,6 +28,16 @@
             <button onclick="switchTab('dashboard')" id="tab-dashboard" class="px-6 py-2 font-semibold text-gray-500 hover:text-blue-600 transition-colors">전체 대시보드</button>
         </div>
 
+        <!-- AI Summary Section -->
+        <div id="ai-summary-container" class="mb-8 card p-6 bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-100 hidden">
+            <h2 class="text-lg font-bold mb-2 flex items-center text-indigo-800">
+                <span class="mr-2">✨</span> AI 지출 분석 요약
+            </h2>
+            <div id="ai-summary-content" class="text-gray-700 font-medium">
+                <!-- AI text goes here -->
+            </div>
+        </div>
+
         <!-- Section 1: Input Form -->
         <div id="section-input" class="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div class="md:col-span-1 card p-6">
@@ -325,6 +335,9 @@
             if(budgetData.length === 0) {
                 body.innerHTML = `<tr><td colspan="5" class="py-10 text-center text-gray-400">등록된 데이터가 없습니다.</td></tr>`;
             }
+            
+            // 데이터 렌더링 시 AI 분석 자동 실행
+            generateAISummary();
         }
 
         // Dashboard Logic
@@ -417,6 +430,51 @@
             
             if(sortedMonths.length === 0) {
                 tableBody.innerHTML = `<tr><td colspan="5" class="p-4 text-gray-400">데이터가 없습니다.</td></tr>`;
+            }
+        }
+
+        // AI Summary Generator
+        async function generateAISummary() {
+            const container = document.getElementById('ai-summary-container');
+            const content = document.getElementById('ai-summary-content');
+
+            if (budgetData.length === 0) {
+                container.classList.add('hidden');
+                return;
+            }
+
+            // 분석 중 UI 표시
+            container.classList.remove('hidden');
+            content.innerHTML = '<span class="animate-pulse text-indigo-500">지출 내역을 AI가 분석하고 있습니다... 🤖</span>';
+
+            // 데이터를 한 줄의 문자열로 병합 (구글 시트의 TEXTJOIN 역할)
+            const dataString = budgetData.map(item => `${item.month} ${item.member} ${item.category} ${item.amount}원`).join(' ');
+            const prompt = "다음 예산 지출내역을 분석하고 가장 큰 특징을 딱 한줄로 요약해줘: " + dataString;
+
+            const payload = {
+                contents: [{ parts: [{ text: prompt }] }]
+            };
+            
+            // API Key는 환경에서 자동 주입되므로 빈 문자열로 둡니다.
+            const apiKey = ""; 
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+                
+                if (result.candidates && result.candidates.length > 0 && result.candidates[0].content) {
+                    content.innerText = result.candidates[0].content.parts[0].text;
+                } else {
+                    content.innerText = "AI 요약을 생성하지 못했습니다.";
+                }
+            } catch (error) {
+                console.error('AI Error:', error);
+                content.innerText = "AI 연동 중 오류가 발생했습니다.";
             }
         }
 
