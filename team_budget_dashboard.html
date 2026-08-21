@@ -174,7 +174,7 @@
         // -------------------------------------------------------------
         // 필수 설정: 배포한 Google Apps Script 웹 앱 URL을 여기에 입력하세요!
         // -------------------------------------------------------------
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyedYQmX6W_JU_rjU5vgyBtkJa4FmPOckcE4fdRY3YWsYmXz74jIIvPYF3fJg-6AUIU/exec'; 
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzOAuI72ab8VOgy55BqC6-KlgvKJwUAZewvv_mxJAbslr3Nj1SKHN2s9ThcDLB7PRAA/exec'; 
 
         // State Management
         let budgetData = [];
@@ -318,9 +318,21 @@
 
         function renderHistory() {
             const body = document.getElementById('historyBody');
-            body.innerHTML = budgetData.map(item => `
+            body.innerHTML = budgetData.map(item => {
+                // 방어 코드: 날짜 문자열 정리 (YYYY-MM 형식 추출)
+                let displayMonth = String(item.month || '');
+                if (displayMonth.length > 7) {
+                   // '2026-07-31T15...' 같은 긴 날짜 문자열이 들어올 경우 앞의 연-월만 자름
+                   displayMonth = displayMonth.substring(0, 7); 
+                }
+
+                // 방어 코드: 금액이 비어있거나 문자가 들어와 NaN이 되는 현상 방지
+                const amountNum = Number(item.amount);
+                const displayAmount = isNaN(amountNum) ? 0 : amountNum;
+
+                return `
                 <tr class="hover:bg-gray-50 transition-colors">
-                    <td class="px-4 py-3 text-sm text-gray-600">${item.month}</td>
+                    <td class="px-4 py-3 text-sm text-gray-600">${displayMonth}</td>
                     <td class="px-4 py-3 text-sm font-semibold text-gray-800">${item.member}</td>
                     <td class="px-4 py-3 text-sm">
                         <span class="px-2 py-1 rounded-full text-xs font-medium 
@@ -329,12 +341,13 @@
                             ${item.category}
                         </span>
                     </td>
-                    <td class="px-4 py-3 text-sm text-right font-mono">${Number(item.amount).toLocaleString()}원</td>
+                    <td class="px-4 py-3 text-sm text-right font-mono">${displayAmount.toLocaleString()}원</td>
                     <td class="px-4 py-3 text-right">
                         <button onclick="deleteEntry('${item.id}')" class="text-red-400 hover:text-red-600">🗑️</button>
                     </td>
                 </tr>
-            `).join('');
+                `;
+            }).join('');
             
             if(budgetData.length === 0) {
                 body.innerHTML = `<tr><td colspan="5" class="py-10 text-center text-gray-400">등록된 데이터가 없습니다.</td></tr>`;
