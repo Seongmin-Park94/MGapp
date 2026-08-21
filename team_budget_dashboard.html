@@ -447,8 +447,9 @@
                 return;
             }
 
-            // API 키 확인
-            if (!GEMINI_API_KEY || GEMINI_API_KEY === "AQ.Ab8RN6K-aiv8ZxuVurBRxt4pW2SsW75K0R1V7Y_wGiI2VxfZMw") {
+            // API 키 확인 및 앞뒤 공백 제거
+            const apiKey = GEMINI_API_KEY.trim();
+            if (!apiKey || apiKey === "여기에_실제_API_키를_입력하세요") {
                 container.classList.remove('hidden');
                 content.innerHTML = '<span class="text-red-500">API 키가 설정되지 않아 AI 요약을 사용할 수 없습니다. 코드에서 GEMINI_API_KEY를 설정해주세요.</span>';
                 return;
@@ -459,14 +460,17 @@
             content.innerHTML = '<span class="animate-pulse text-indigo-500">지출 내역을 AI가 분석하고 있습니다... 🤖</span>';
 
             // 데이터를 한 줄의 문자열로 병합 (구글 시트의 TEXTJOIN 역할)
-            const dataString = budgetData.map(item => `${item.month} ${item.member} ${item.category} ${item.amount}원`).join(' ');
+            const dataString = budgetData.map(item => `${item.month} ${item.member} ${item.category} ${item.amount}원`).join(', ');
             const prompt = "다음 예산 지출내역을 분석하고 가장 큰 특징을 딱 한줄로 요약해줘: " + dataString;
 
             const payload = {
-                contents: [{ parts: [{ text: prompt }] }]
+                contents: [{
+                    role: "user",  // 명시적으로 role 추가
+                    parts: [{ text: prompt }]
+                }]
             };
             
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
             try {
                 const response = await fetch(apiUrl, {
@@ -475,8 +479,17 @@
                     body: JSON.stringify(payload)
                 });
                 
+                // 에러 발생 시 구체적인 에러 메시지 추출
                 if (!response.ok) {
-                    throw new Error(`API 응답 오류: ${response.status}`);
+                    const errorText = await response.text();
+                    let errorMessage = response.status;
+                    try {
+                        const errorJson = JSON.parse(errorText);
+                        errorMessage += ` - ${errorJson.error.message}`;
+                    } catch(e) {
+                        errorMessage += ` - ${errorText}`;
+                    }
+                    throw new Error(errorMessage);
                 }
                 
                 const result = await response.json();
@@ -489,6 +502,7 @@
                 }
             } catch (error) {
                 console.error('AI Error:', error);
+                // 구체적인 에러 메시지를 화면에 출력
                 content.innerText = `AI 연동 중 오류가 발생했습니다: ${error.message}`;
             }
         }
