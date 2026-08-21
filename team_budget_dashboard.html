@@ -164,17 +164,17 @@
         <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
         <p class="text-blue-600 font-semibold" id="loadingText">데이터를 불러오는 중입니다...</p>
     </div>
+    <!-- 로딩 오버레이 (새로 추가) -->
+    <div id="loadingOverlay" class="fixed inset-0 bg-white bg-opacity-70 hidden flex flex-col items-center justify-center z-[60]">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+        <p class="text-blue-600 font-semibold" id="loadingText">데이터를 불러오는 중입니다...</p>
+    </div>
 
     <script>
         // -------------------------------------------------------------
-        // 필수 설정: 배포한 Google Apps Script 웹 앱 URL
+        // 필수 설정: 배포한 Google Apps Script 웹 앱 URL을 여기에 입력하세요!
         // -------------------------------------------------------------
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzOAuI72ab8VOgy55BqC6-KlgvKJwUAZewvv_mxJAbslr3Nj1SKHN2s9ThcDLB7PRAA/exec';
-        
-        // -------------------------------------------------------------
-        // 필수 설정: Gemini API Key (이곳에 실제 발급받은 API 키를 입력하세요)
-        // -------------------------------------------------------------
-        const GEMINI_API_KEY = "여기에_실제_API_키를_입력하세요";
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzOAuI72ab8VOgy55BqC6-KlgvKJwUAZewvv_mxJAbslr3Nj1SKHN2s9ThcDLB7PRAA/exec'; 
 
         // State Management
         let budgetData = [];
@@ -408,7 +408,7 @@
             const tableBody = document.getElementById('summaryTableBody');
             const monthlyData = {};
 
-            budgetData.forEach(item => {
+            // Grouping data by month and category
                 if(!monthlyData[item.month]) {
                     monthlyData[item.month] = { '수선유지비': 0, '비품': 0, '개량공사': 0, total: 0 };
                 }
@@ -437,7 +437,7 @@
             }
         }
 
-        // AI Summary Generator
+        // AI Summary Generator (Google Sheets 커스텀 함수 결과 호출 방식으로 변경)
         async function generateAISummary() {
             const container = document.getElementById('ai-summary-container');
             const content = document.getElementById('ai-summary-content');
@@ -447,66 +447,34 @@
                 return;
             }
 
-            // API 키 확인 및 앞뒤 공백 제거
-            const apiKey = GEMINI_API_KEY.trim();
-            if (!apiKey || apiKey === "여기에_실제_API_키를_입력하세요") {
-                container.classList.remove('hidden');
-                content.innerHTML = '<span class="text-red-500">API 키가 설정되지 않아 AI 요약을 사용할 수 없습니다. 코드에서 GEMINI_API_KEY를 설정해주세요.</span>';
-                return;
-            }
-
             // 분석 중 UI 표시
             container.classList.remove('hidden');
-            content.innerHTML = '<span class="animate-pulse text-indigo-500">지출 내역을 AI가 분석하고 있습니다... 🤖</span>';
-
-            // 데이터를 한 줄의 문자열로 병합 (구글 시트의 TEXTJOIN 역할)
-            const dataString = budgetData.map(item => `${item.month} ${item.member} ${item.category} ${item.amount}원`).join(', ');
-            const prompt = "다음 예산 지출내역을 분석하고 가장 큰 특징을 딱 한줄로 요약해줘: " + dataString;
-
-            const payload = {
-                contents: [{
-                    role: "user",  // 명시적으로 role 추가
-                    parts: [{ text: prompt }]
-                }]
-            };
-            
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+            content.innerHTML = '<span class="animate-pulse text-indigo-500">구글 시트에서 AI 요약을 가져오는 중입니다... 🤖</span>';
 
             try {
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                
-                // 에러 발생 시 구체적인 에러 메시지 추출
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    let errorMessage = response.status;
-                    try {
-                        const errorJson = JSON.parse(errorText);
-                        errorMessage += ` - ${errorJson.error.message}`;
-                    } catch(e) {
-                        errorMessage += ` - ${errorText}`;
-                    }
-                    throw new Error(errorMessage);
-                }
-                
+                // Apps Script에 새로 추가한 getSummary 액션 호출
+                const response = await fetch(`${SCRIPT_URL}?action=getSummary`);
                 const result = await response.json();
                 
-                if (result.candidates && result.candidates.length > 0 && result.candidates[0].content) {
-                    content.innerText = result.candidates[0].content.parts[0].text;
+                if (result.status === 'success') {
+                    const summaryText = result.data;
+                    
+                    // 구글 시트 커스텀 함수(mygemini) 특성상 계산되는 동안 'Loading...' 이 출력될 수 있음
+                    if (summaryText === 'Loading...' || summaryText === '' || summaryText.includes('Loading')) {
+                        content.innerHTML = '<span class="text-gray-500">시트에서 AI 분석을 진행 중입니다. 잠시 후 새로고침 해주세요.</span>';
+                    } else {
+                        content.innerText = summaryText;
+                    }
                 } else {
-                    content.innerText = "AI 요약을 생성하지 못했습니다.";
-                    console.error("API 응답 형태 이상:", result);
+                    throw new Error(result.message);
                 }
             } catch (error) {
                 console.error('AI Error:', error);
-                // 구체적인 에러 메시지를 화면에 출력
-                content.innerText = `AI 연동 중 오류가 발생했습니다: ${error.message}`;
+                content.innerText = `요약을 가져오는 중 오류가 발생했습니다: ${error.message}`;
             }
         }
 
+        // Custom Alert Controls
         function showAlert(title, msg) {
             document.getElementById('alertTitle').innerText = title;
             document.getElementById('alertMsg').innerText = msg;
